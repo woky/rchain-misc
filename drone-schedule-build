@@ -1,0 +1,46 @@
+#!/bin/bash -e
+set -o pipefail
+
+source /etc/drone/drone-client.conf
+
+exec 3>&1
+
+lastofstatus()
+{
+	local n="$(
+		drone build ls \
+			--branch dev \
+			--event push \
+			--status $1 \
+			--limit 1 \
+			--format '{{.Number}}' \
+			rchain/rchain)"
+
+	if [[ -z "$n" ]]; then
+		n=0
+	elif [[ ! "$n" =~ ^[0-9]+$ ]]; then
+		echo "Got unexpected reply: '$n'" >&2
+		exit 1
+	fi
+
+	echo "Last build of status '$1': $n" >&3
+
+	echo $n
+}
+
+last_success="$(lastofstatus success)"
+
+if [[ ! $last_success -gt 0 ]]; then
+	echo "There are no successful builds"
+	exit 0
+fi
+
+if [[
+	( $(lastofstatus running) -gt $last_success ) ||
+	( $(lastofstatus pending) -gt $last_success ) ||
+	( $(lastofstatus blocked) -gt $last_success ) ]]; then
+	echo "Will not schedule another build"
+	exit 0
+fi
+
+drone build start rchain/rchain $last_success

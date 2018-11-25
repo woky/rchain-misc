@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if command -V systemd-cat >/dev/null; then
+	exec systemd-cat drone-schedule-build
+else
+	drone-schedule-build |& ( command -V ts >/dev/null && ts || cat ) \
+		>>/var/log/drone-schedule-build.log
+fi
