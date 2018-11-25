@@ -1,0 +1,41 @@
+# vim:ft=zsh:
+# My overengineered functions for building RChain on the Build Machine.
+
+ROOT=$HOME/work/rchain
+BM=woky.pyr8.io
+BU=builder
+DV=v1.0.3-2-g3755f32
+#DV=v1.0.3
+
+logexe() { echo ">> $@"; "$@" }
+
+bmlog() {
+	local file=$ROOT/bm.$(date -Is|sed 's/+.*//').log
+	echo ">! START log to $file"
+	ts | tee $file
+	echo ">! END log to $file"
+}
+
+bmsync() {
+	logexe rsync -avh \
+ 		--chown=$BU:$BU \
+ 		--filter=':- .gitignore' \
+		$ROOT/rchain/ $BM:/home/$BU/rchain "$@"
+}
+
+bmrun() {
+	time logexe ssh -t $BM docker run -it \
+		-v /home/$BU:/home/builder \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-w /home/builder/rchain \
+		-e _JAVA_OPTIONS='"-Xms2G -Xmx4G -XX:MaxMetaspaceSize=1G"' \
+		rchain/buildenv:$DV "$@"
+}
+
+bmsh()       { bmrun bash }
+bmcmd()      { bmrun bash -cex "'$@'" |& bmlog }
+bmmrproper() { bmcmd 'rm -rf ~/.sbt ~/.ivy2 ~/rchain' }
+bmsbt()      ( set -e; for c in "$@"; bmcmd "sbt $c" )
+bmclean()    { bmsbt clean bnfc:clean }
+bmcompile()  { bmsbt update rholang/bnfc:generate compile test:compile it:compile doc }
+bmtest()     { bmsbt test it:test }
