@@ -1,5 +1,6 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-*/15 * * * Sat,Sun root drone-schedule-build-cron
+*/15 *   * * Sat,Sun root drone-schedule-build-cron
+*/15 0-5 * * Mon     root drone-schedule-build-cron
 
 # vim:ft=crontab:

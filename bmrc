@@ -39,3 +39,4 @@ bmsbt()      ( set -e; for c in "$@"; bmcmd "sbt $c" )
 bmclean()    { bmsbt clean bnfc:clean }
 bmcompile()  { bmsbt update rholang/bnfc:generate compile test:compile it:compile doc }
 bmtest()     { bmsbt test it:test }
+bmpackage()  { bmsbt docker:publishLocal node/universal:stage }
