@@ -1,0 +1,22 @@
+#!/bin/bash
+
+port_opts='--grpc-port 40401 --grpc-port-internal 40402'
+
+while :
+do
+	sleep $(shuf -n1 -i30-90)
+
+	contract=$(ls examples/*.rho | sort -R | head -1)
+	echo "Proposing contract $contract"
+
+	./bin/rnode $port_opts deploy \
+		--from 0x1 \
+		--phlo-limit 1000000 \
+		--phlo-price 1 \
+		--nonce 0 \
+		$contract
+
+	if [[ $? -eq 0 ]]; then
+		./bin/rnode $port_opts propose
+	fi
+done

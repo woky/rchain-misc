@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+suffix=1
+
+docker ps --format '{{.Image}}\t{{.ID}}\t{{.Names}}' |\
+	grep '^rchain/rnode:' |\
+	while read image id name
+	do
+		echo "Stopping container $id (image=$image, name=$name)"
+		docker stop $name >/dev/null
+
+		start_date=$(docker inspect -f '{{.State.StartedAt}}' $id)
+		start_date=$(echo $start_date | cut -c-16 | sed 's/[-:]//g')
+		new_name=$name.$start_date.$suffix
+
+		echo "Renaming container $name to $new_name"
+		docker rename $id $new_name
+		suffix=$((suffix+1))
+	done

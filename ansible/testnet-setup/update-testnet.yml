@@ -1,0 +1,129 @@
+---
+-
+  hosts:
+  - rchain-pyr10
+  - bootstrap-testing.pyr8.io
+
+  vars:
+    rnode_rev: testing
+    bootstrap_addr: "rnode://f4f20286feebc89d36d11b9e6ad726b6dd3d1490@52.119.8.51?protocol=40400&discovery=40404"
+
+  tasks:
+
+  - name: Comment out wrong apt source line
+    replace:
+      path: /etc/apt/sources.list
+      regexp: '(^[^#].*download\.docker\.com/linux/debian)'
+      replace: '#\1'
+      backup: yes
+
+  - name: Install python-docker on target
+    apt:
+      name: python-docker
+      state: present
+
+  - name: Set container name
+    set_fact:
+      container_name:
+        "rnode-{{ inventory_hostname | regex_replace('\\..*', '') }}"
+
+  - name: Stop running validator
+    script: ./stop-container
+    register: stop_validator
+    changed_when: "'Stopping' in stop_validator.stdout"
+
+  - name: Clean RChain data
+    file: state=absent path={{ item }}
+    with_items:
+    - /var/lib/rnode/casper-block-store
+    - /var/lib/rnode/genesis
+    - /var/lib/rnode/rspace
+
+  - name: Create data directory
+    file: state=directory path=/var/lib/rnode
+
+  - name: Copy files
+    copy: src={{ item }} dest=/var/lib/rnode/ mode=preserve
+    with_items:
+    - bonds.txt
+    - wallets.txt
+    - autopropose
+
+  - name: Start bootstrap node
+    docker_container:
+      name: "{{ container_name }}"
+      image: rchain/rnode:{{ rnode_rev }}
+      pull: yes
+      volumes:
+      - /var/lib/rnode:/var/lib/rnode
+      command: >
+        --grpc-port 40401
+        --grpc-port-internal 40402
+        run
+        --standalone
+        --has-faucet
+        --port 40400
+        --http-port 40403
+        --kademlia-port 40404
+        --bonds-file /var/lib/rnode/bonds.txt
+        --wallets-file /var/lib/rnode/wallets.txt
+      ports:
+      - 40400:40400
+      - 40401:40401
+      - 127.0.0.1:40402:40402
+      - 127.0.0.1:40403:40403
+      - 40404:40404
+    when: bootstrap_node is defined
+
+  - name: Wait for bootstrap node to listen
+    wait_for:
+      host: 0.0.0.0
+      port: 40400
+      delay: 20
+    when: bootstrap_node is defined
+
+  - name: Start validator node
+    docker_container:
+      name: "{{ container_name }}"
+      image: rchain/rnode:{{ rnode_rev }}
+      pull: yes
+      volumes:
+      - /var/lib/rnode:/var/lib/rnode
+      command: >
+        --grpc-port 40401
+        --grpc-port-internal 40402
+        run
+        --bootstrap {{ bootstrap_addr }}
+        --validator-private-key {{ private_key }}
+        --port 40400
+        --http-port 40403
+        --kademlia-port 40404
+        --bonds-file /var/lib/rnode/bonds.txt
+        --wallets-file /var/lib/rnode/wallets.txt
+      ports:
+      - 40400:40400
+      - 40401:40401
+      - 127.0.0.1:40402:40402
+      - 127.0.0.1:40403:40403
+      - 40404:40404
+    when: bootstrap_node is not defined
+
+  - name: Wait for validator node to listen
+    wait_for:
+      host: 0.0.0.0
+      port: 40400
+      delay: 20
+    when: bootstrap_node is not defined
+
+  - name: Start auto propose
+    docker_container:
+      name: "{{ container_name }}-autopropose"
+      image: rchain/rnode:{{ rnode_rev }}
+      pull: yes
+      network_mode: host
+      volumes:
+      - /var/lib/rnode:/var/lib/rnode
+      entrypoint: /var/lib/rnode/autopropose
+    when: autopropose is defined
+
+# vim:ft=yaml.ansible:
