@@ -1,12 +1,7 @@
 ---
 -
   hosts:
-  - rchain-pyr10
-  - bootstrap-testing.pyr8.io
-
-  vars:
-    rnode_rev: testing
-    bootstrap_addr: "rnode://f4f20286feebc89d36d11b9e6ad726b6dd3d1490@52.119.8.51?protocol=40400&discovery=40404"
+  - rchain-testnet
 
   tasks:
 
