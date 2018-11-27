@@ -4,7 +4,7 @@
 ROOT=$HOME/work/rchain
 BM=woky.pyr8.io
 BU=builder
-DV=v1.0.3-2-g3755f32
+DV=v1.0.3-3-g3755f32
 #DV=v1.0.3
 
 logexe() { echo ">> $@"; "$@" }
@@ -23,8 +23,16 @@ bmsync() {
 		$ROOT/rchain/ $BM:/home/$BU/rchain "$@"
 }
 
+bmsyncpull() {
+	logexe rsync -rtvh $BM:/home/$BU/rchain/ $ROOT/rchain/ "$@"
+}
+
 bmrun() {
-	time logexe ssh -t $BM docker run -it \
+	local t=-t
+	[[ $T == 0 ]] && t=
+	time logexe ssh $t $BM docker run $t -i \
+		--network=host \
+		-v /tmp:/tmp \
 		-v /home/$BU:/home/builder \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /home/builder/rchain \
@@ -33,6 +41,7 @@ bmrun() {
 }
 
 bmsh()       { bmrun bash }
+bmshin()     { T=0 bmrun bash -s }
 bmcmd()      { bmrun bash -cex "'$@'" |& bmlog }
 bmmrproper() { bmcmd 'rm -rf ~/.sbt ~/.ivy2 ~/rchain' }
 bmsbt()      ( set -e; for c in "$@"; bmcmd "sbt $c" )
