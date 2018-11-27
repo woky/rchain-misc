@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+import fileinput
+import nacl.encoding
+import nacl.signing
+
+for skhex in fileinput.input():
+    sk = nacl.signing.SigningKey(skhex.strip(), encoder=nacl.encoding.HexEncoder)
+    pk = sk.verify_key
+    print(pk.encode(encoder=nacl.encoding.HexEncoder).decode('ascii'))
