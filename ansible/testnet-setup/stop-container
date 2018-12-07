@@ -1,9 +1,10 @@
 #!/bin/bash -e
 
 suffix=1
+img_regex='^rchain/rnode:'
 
 docker ps --format '{{.Image}}\t{{.ID}}\t{{.Names}}' |\
-	grep '^rchain/rnode:' |\
+	grep "$img_regex" |\
 	while read image id name
 	do
 		echo "Stopping container $id (image=$image, name=$name)"

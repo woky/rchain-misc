@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+name_regex='^(rnode|autopropose)$'
+
+docker ps -a --format '{{.ID}} {{.Names}}' -f name=$name_regex |\
+	while read id name
+	do
+		echo "Stopping container $id (name=$name)"
+		docker stop $name >/dev/null || true
+
+		start_date=$(docker inspect -f '{{.State.StartedAt}}' $id)
+		start_date=$(echo $start_date | cut -c-16 | sed 's/[-:]//g')
+		new_name=$name.$start_date
+
+		echo "Renaming container $name to $new_name"
+		docker rename $id $new_name
+	done

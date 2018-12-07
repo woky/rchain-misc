@@ -1,21 +1,18 @@
 - hosts:
   - rchain-testnet
   roles:
-  - docker-ce
+  - role: docker-ce
+    tags: setup
 
   tasks:
 
-  - name: Stop running rnode
-    script: ./stop-container
+  - name: Stop and archive running rnode and autopropose
+    script: ./stop-testnet-containers
     register: stop_rnode
     changed_when: "'Stopping' in stop_rnode.stdout"
 
-  - name: Clean RChain data
-    file: state=absent path={{ item }}
-    with_items:
-    - /var/lib/rnode/casper-block-store
-    - /var/lib/rnode/genesis
-    - /var/lib/rnode/rspace
+  - name: Clean data directory
+    file: state=absent path=/var/lib/rnode
 
   - name: Create data directory
     file: state=directory path=/var/lib/rnode
@@ -26,6 +23,12 @@
     - bonds.txt
     - wallets.txt
     - autopropose
+
+  - name: Copy bootstrap node key and certificate
+    when: kind == 'bootstrap'
+    copy: src={{ item }} dest=/var/lib/rnode/ mode=preserve
+    with_fileglob:
+    - private/node.*.pem
 
   - name: Start bootstrap node
     when: kind == 'bootstrap'
@@ -59,7 +62,7 @@
     wait_for:
       host: 0.0.0.0
       port: 40400
-      delay: 60
+      delay: 120
 
   - name: Start validator node
     when: kind != 'bootstrap'
