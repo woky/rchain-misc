@@ -1,14 +1,14 @@
 #!/bin/bash -e
 set -o pipefail
 
-source /etc/drone/drone-client.conf
+DRONE="docker run --env-file=/etc/drone-client.conf drone/cli:0.8.6"
 
 exec 3>&1
 
 lastofstatus()
 {
 	local n="$(
-		drone build ls \
+		$DRONE build ls \
 			--branch dev \
 			--event push \
 			--status $1 \
@@ -43,4 +43,4 @@ if [[
 	exit 0
 fi
 
-drone build start rchain/rchain $last_success
+$DRONE build start rchain/rchain $last_success
