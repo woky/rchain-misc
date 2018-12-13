@@ -1,0 +1,39 @@
+Ansible playbook to update RChain Testnet
+
+Disclaimer: This is my first serious Ansible playbook.
+
+You need to define testnet nodes in Ansible hosts file. This file is located at
+/etc/ansible/hosts by default. I have it in ~/ansible/hosts. To make Ansible use
+that file, set inventory variable under defaults section in ~/.ansible.cfg:
+
+  [defaults]
+  inventory = ~/ansible/hosts
+
+Now define hosts and variables like this:
+
+  [rchain-gcp:vars]
+  ansible-user=<your-gce-admin-user>
+  ansible_become=yes # ansible_user can sudo as root without password
+  [rchain-gcp:children]
+  rchain-testnet
+  
+  [rchain-testnet:vars]
+  kind=validator
+  rel=dev # Docker tag aka rnode release
+  bootstrap="rnode://f4f20286feebc89d36d11b9e6ad726b6dd3d1490@35.243.229.81?protocol=40400&discovery=40404"
+  [rchain-testnet]
+  bootstrap-testnet.rchain-dev.tk kind=bootstrap 
+  validator-01.rchain-dev.tk pk=<validator-pk> 
+  validator-02.rchain-dev.tk pk=<validator-pk>  autopropose=true
+  validator-03.rchain-dev.tk pk=<validator-pk> 
+  validator-04.rchain-dev.tk pk=<validator-pk>  autopropose=true
+  validator-05.rchain-dev.tk pk=<validator-pk> 
+
+You also need some files in private/ directory:
+
+  - node.certificate.pem, node.key.pem
+    This is for bootstrap. Nodes generate new ones.
+
+Finally, change into directory where update-testnet.yml is and run
+
+  ansible-playbook update-testnet.yml
