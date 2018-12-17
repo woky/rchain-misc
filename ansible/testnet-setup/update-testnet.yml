@@ -120,4 +120,26 @@
       ports:
       - 8181:80
 
+  - name: InfluxDB is running
+    docker_container:
+      name: influxdb
+      image: influxdb:1.7
+      pull: yes
+      volumes:
+        - /var/run/docker.dock:/var/run/docker.sock
+        - influxdb:/var/lib/influxdb
+      ports:
+        - 8086:8086
+
+  - name: Chronograf is running
+    docker_container:
+      name: chronograf
+      image: chronograf:1.7
+      pull: yes
+      volumes:
+        - /var/run/docker.dock:/var/run/docker.sock
+        - chronograf:/var/lib/chronograf
+      ports:
+        - 8888:8888
+
 # vim:ft=yaml.ansible:
