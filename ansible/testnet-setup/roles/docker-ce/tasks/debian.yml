@@ -1,10 +1,11 @@
 - name: Install packages required by Docker CE Apt repository
-  package: name={{ item }} state=present
-  with_items:
-  - apt-transport-https
-  - ca-certificates
-  - gnupg2
-  - software-properties-common
+  package:
+    name:
+    - apt-transport-https
+    - ca-certificates
+    - gnupg2
+    - software-properties-common
+    state: present
 
 - name: Add Docker CE Apt repository GPG key
   apt_key:
@@ -17,9 +18,10 @@
     state: present
 
 - name: Install Docker packages
-  package: name={{ item }} state=present
-  with_items:
-  - docker-ce
-  - docker-compose
-  - python-docker
-  - python3-docker
+  package:
+    name:
+    - docker-ce
+    - docker-compose
+    - python-docker
+    - python3-docker
+    state: present

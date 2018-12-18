@@ -13,7 +13,7 @@ while :
 do
 	sleep $(shuf -n1 -i30-90)
 
-	echo "Proposing contract $contract"
+	echo "Deploying contract $contract"
 
 	./bin/rnode $port_opts deploy \
 		--from 0x1 \
@@ -22,9 +22,20 @@ do
 		--nonce 0 \
 		$contract
 
-	sleep 5
+	ret=$?
+	if [[ $ret -eq 0 ]]; then
+		sleep 5
 
-	if [[ $? -eq 0 ]]; then
+		echo "Proposing"
 		./bin/rnode $port_opts propose
+
+		ret=$?
+		if [[ $ret -eq 0 ]]; then
+			echo "Propose succeeded"
+		else
+			echo "Propose failed ($ret)"
+		fi
+	else
+		echo "Deploy failed ($ret)"
 	fi
 done

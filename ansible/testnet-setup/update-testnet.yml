@@ -23,6 +23,7 @@
     - bonds.txt
     - wallets.txt
     - autopropose
+    - autopropose-single
 
   - name: Copy bootstrap node key and certificate
     when: kind == 'bootstrap'
@@ -98,6 +99,13 @@
       port: 40400
       delay: 10
 
+
+  - name: Create simple contract
+    when: autopropose is defined
+    copy:
+      content: "@{{ inventory_hostname | regex_replace('[^1-9]', '') }}!(Nil)"
+      dest: /var/lib/rnode/simple.rho
+
   - name: Start auto propose
     when: autopropose is defined
     docker_container:
@@ -108,7 +116,9 @@
       network_mode: host
       volumes:
       - /var/lib/rnode:/var/lib/rnode
-      entrypoint: /var/lib/rnode/autopropose
+      entrypoint:
+      - /var/lib/rnode/autopropose-single
+      - /var/lib/rnode/simple.rho
 
   - name: logspout is running
     docker_container:
