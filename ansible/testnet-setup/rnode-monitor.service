@@ -1,0 +1,5 @@
+[Service]
+ExecStart=/usr/local/bin/rnode-monitor
+
+[Install]
+WantedBy=default.target

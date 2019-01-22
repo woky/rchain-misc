@@ -1,0 +1,40 @@
+# vim:ft=yaml.ansible:
+
+- import_tasks: install-rdoctor-monitor.task.yml
+  when: rdoctor_apikey is defined
+
+- name: "Start node: {{kind}}"
+  register: docker_ret
+  docker_container:
+    name: rnode
+    image: rchain/rnode:{{rel}}
+    pull: yes
+    recreate: yes
+    volumes:
+    - /var/lib/rnode:/var/lib/rnode
+    command: >
+      --grpc-port 40401
+      --grpc-port-internal 40402
+      run
+      --port 40400
+      --http-port 40403
+      --kademlia-port 40404
+      --bonds-file /var/lib/rnode/bonds.txt
+      --wallets-file /var/lib/rnode/wallets.txt
+      {{rnode_add_args}}
+    ports:
+    - 40400:40400
+    - 127.0.0.1:40401:40401
+    - 127.0.0.1:40402:40402
+    - 127.0.0.1:40403:40403
+    - 40404:40404
+
+- name: logspout is running
+  docker_container:
+    name: logspout
+    image: gliderlabs/logspout
+    pull: yes
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - 8181:80

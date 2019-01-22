@@ -2,21 +2,84 @@
 
 port_opts='--grpc-port 40401 --grpc-port-internal 40402'
 
+validator_name=$(hostname | sed 's/\..*//')
+
+if ! echo $propose_validators | sed 's/,/\n/g' | grep -q $validator_name; then
+	exit 0
+fi
+
+if ! (( $propose_delay_min >= 0 )); then
+	echo "propose_delay_min is not a number >= 0" >&2
+	exit 1
+fi
+if ! (( $propose_delay_max >= 0 )); then
+	echo "propose_delay_max is not a number >= 0" >&2
+	exit 1
+fi
+if (( $propose_delay_min > $propose_delay_max )); then
+	echo "propose_delay_min > propose_delay_max" >&2
+	exit 1
+fi
+
+case $propose_mode in
+	random)
+		get_contract() {
+			ls examples/*.rho | sort -R | head -1
+		}
+		;;
+	single)
+		if [[ -z $propose_contract ]]; then
+			echo "propose_mode is 'single' but propose_contract is not set" >&2
+			exit 1
+		fi
+		if [[ ! -f examples/$propose_contract ]]; then
+			echo "propose_contract '$propose_contract' is not in examples/" >&2
+			exit 1
+		fi
+
+		get_contract() {
+			echo examples/$propose_contract
+		}
+		;;
+	minimal)
+		num=$(echo $validator_name | sed 's/[^0-9]//g')
+		if [[ -z $num ]]; then
+			echo "Validator name '$validator_name' has no numbers" >&2
+			exit 1
+		fi
+
+		echo "@$num!(Nil)" >/tmp/minimal.rho
+		get_contract() {
+			echo /tmp/minimal.rho
+		}
+		;;
+	disabled)
+		exit 0
+		;;
+	*)
+		echo "Unknown/empty propose_mode: '$propose_mode'" >&2
+		exit 1
+		;;
+esac
+
+sleep $((2*60))
+
 while :
 do
-	sleep $(shuf -n1 -i30-90)
+	contract=$(get_contract)
 
-	contract=$(ls examples/*.rho | sort -R | head -1)
-	echo "Proposing contract $contract"
-
+	echo "Deploying contract $contract"
 	./bin/rnode $port_opts deploy \
 		--from 0x1 \
-		--phlo-limit 1000000 \
+		--phlo-limit 1000000000 \
 		--phlo-price 1 \
 		--nonce 0 \
 		$contract
 
 	if [[ $? -eq 0 ]]; then
+		echo "Proposing"
 		./bin/rnode $port_opts propose
 	fi
+
+	sleep $(shuf -n1 -i$propose_delay_min-$propose_delay_max)
 done

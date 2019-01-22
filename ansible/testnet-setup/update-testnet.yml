@@ -1,3 +1,5 @@
+# vim:ft=yaml.ansible:
+
 - hosts:
   - rchain-testnet
   roles:
@@ -31,32 +33,12 @@
     with_fileglob:
     - private/node.*.pem
 
-  - name: Start bootstrap node
+  - import_tasks: start-rnode.task.yml
     when: kind == 'bootstrap'
-    docker_container:
-      name: rnode
-      image: rchain/rnode:{{ rel }}
-      pull: yes
-      #recreate: yes
-      volumes:
-      - /var/lib/rnode:/var/lib/rnode
-      command: >
-        --grpc-port 40401
-        --grpc-port-internal 40402
-        run
+    vars:
+      rnode_add_args: >
         --standalone
         --has-faucet
-        --port 40400
-        --http-port 40403
-        --kademlia-port 40404
-        --bonds-file /var/lib/rnode/bonds.txt
-        --wallets-file /var/lib/rnode/wallets.txt
-      ports:
-      - 40400:40400
-      - 127.0.0.1:40401:40401
-      - 127.0.0.1:40402:40402
-      - 127.0.0.1:40403:40403
-      - 40404:40404
 
   - name: Wait for bootstrap node to listen
     when: kind == 'bootstrap'
@@ -65,32 +47,12 @@
       port: 40400
       delay: 120
 
-  - name: Start validator node
+  - import_tasks: start-rnode.task.yml
     when: kind != 'bootstrap'
-    docker_container:
-      name: rnode
-      image: rchain/rnode:{{ rel }}
-      pull: yes
-      #recreate: yes
-      volumes:
-      - /var/lib/rnode:/var/lib/rnode
-      command: >
-        --grpc-port 40401
-        --grpc-port-internal 40402
-        run
-        --bootstrap {{ bootstrap }}
-        --validator-private-key {{ pk }}
-        --port 40400
-        --http-port 40403
-        --kademlia-port 40404
-        --bonds-file /var/lib/rnode/bonds.txt
-        --wallets-file /var/lib/rnode/wallets.txt
-      ports:
-      - 40400:40400
-      - 127.0.0.1:40401:40401
-      - 127.0.0.1:40402:40402
-      - 127.0.0.1:40403:40403
-      - 40404:40404
+    vars:
+      rnode_add_args: >
+        --bootstrap {{bootstrap}}
+        --validator-private-key {{pk}}
 
   - name: Wait for validator node to listen
     when: kind != 'bootstrap'
@@ -99,35 +61,20 @@
       port: 40400
       delay: 10
 
-
-  - name: Create simple contract
-    when: autopropose is defined
-    copy:
-      content: "@{{ inventory_hostname | regex_replace('[^1-9]', '') }}!(Nil)"
-      dest: /var/lib/rnode/simple.rho
-
   - name: Start auto propose
-    when: autopropose is defined
     docker_container:
       name: autopropose
       image: rchain/rnode:{{ rel }}
       pull: yes
-      #recreate: yes
+      recreate: yes
       network_mode: host
       volumes:
       - /var/lib/rnode:/var/lib/rnode
       entrypoint:
-      - /var/lib/rnode/autopropose-single
-      - /var/lib/rnode/simple.rho
-
-  - name: logspout is running
-    docker_container:
-      name: logspout
-      image: gliderlabs/logspout
-      pull: yes
-      volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      ports:
-      - 8181:80
-
-# vim:ft=yaml.ansible:
+      - /var/lib/rnode/autopropose
+      env:
+        propose_contract: '{{ propose_contract }}'
+        propose_delay_max: '{{ propose_delay_max }}'
+        propose_delay_min: '{{ propose_delay_min }}'
+        propose_mode: '{{ propose_mode }}'
+        propose_validators: '{{ propose_validators }}'

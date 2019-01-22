@@ -1,0 +1,17 @@
+#!/bin/bash
+
+: ${RD_OPTION_TAG:=dev}
+
+echo
+echo "Relaunching RChain Testnet to release '$RD_OPTION_TAG'"
+echo
+
+cd ~/testnet-setup
+make
+ansible-playbook update-testnet.yml --skip-tags setup \
+	-e rel=$RD_OPTION_TAG \
+	-e propose_contract=$RD_OPTION_PROPOSE_CONTRACT \
+	-e propose_delay_max=$RD_OPTION_PROPOSE_DELAY_MAX \
+	-e propose_delay_min=$RD_OPTION_PROPOSE_DELAY_MIN \
+	-e propose_mode=$RD_OPTION_PROPOSE_MODE \
+	-e propose_validators=$RD_OPTION_PROPOSE_VALIDATORS

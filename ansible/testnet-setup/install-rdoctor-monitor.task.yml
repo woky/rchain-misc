@@ -1,0 +1,33 @@
+# vim:ft=yaml.ansible:
+
+- name: Download rdoctor
+  when: rdoctor_apikey is defined
+  get_url:
+    url: https://build.rchain-dev.tk/misc/rdoctor/latest/linux.amd64/rdoctor
+    dest: /usr/local/bin/rdoctor
+    mode: 0755
+
+- name: Add API key to rdoctor configuration
+  lineinfile:
+    path: /root/.rdoctor.ini
+    regexp: '^\\s*apikey\\s*='
+    line: 'apikey = {{rdoctor_apikey}}'
+    create: yes
+    mode: 0600
+
+- name: Copy rnode-monitor script
+  copy:
+    src: rnode-monitor
+    dest: /usr/local/bin/rnode-monitor
+    mode: preserve
+
+- name: Copy rnode-monitor.service systemd unit
+  copy:
+    src: rnode-monitor.service
+    dest: /etc/systemd/system/rnode-monitor.service
+
+- name: Enable and start rnode-monitor service
+  systemd:
+    name: rnode-monitor.service
+    state: started
+    enabled: yes
